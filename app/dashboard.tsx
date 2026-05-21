@@ -100,6 +100,7 @@ function D({
   const off = offsets?.[id] ?? { x: 0, y: 0 };
   const [hover, setHover] = useState(false);
   const interactive = !!onStartDrag;
+  const hasOffset = off.x !== 0 || off.y !== 0;
 
   return (
     <div
@@ -112,15 +113,13 @@ function D({
       onMouseLeave={interactive ? () => setHover(false) : undefined}
       style={{
         ...style,
-        transform: `translate(${off.x}px, ${off.y}px)`,
-        cursor: interactive ? "grab" : undefined,
-        userSelect: "none",
-        outline: interactive
-          ? isSelected
-            ? "2.5px solid rgba(29,52,97,0.65)"
-            : hover ? "2px dashed rgba(29,52,97,0.35)" : undefined
-          : undefined,
-        outlineOffset: "8px",
+        ...(hasOffset ? { transform: `translate(${off.x}px, ${off.y}px)` } : {}),
+        ...(interactive ? { cursor: "grab", userSelect: "none" } : {}),
+        ...(interactive && isSelected
+          ? { outline: "2.5px solid rgba(29,52,97,0.65)", outlineOffset: "8px" }
+          : interactive && hover
+          ? { outline: "2px dashed rgba(29,52,97,0.35)", outlineOffset: "8px" }
+          : {}),
       }}
     >
       {children}
@@ -221,8 +220,8 @@ function AnswerSlide({
         </div>
       </D>
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 36, zIndex: 3 }}>
-        <D id="a-answer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-answer"}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 3 }}>
+        <D id="a-answer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-answer"} style={{ marginBottom: 36 }}>
           <div style={{
             fontFamily: FONT, fontSize: 110 * sc("a-answer"),
             letterSpacing: `${ls("a-answer")}em`,
@@ -232,7 +231,7 @@ function AnswerSlide({
           </div>
         </D>
 
-        <D id="a-cover" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-cover"}>
+        <D id="a-cover" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-cover"} style={{ marginBottom: 36 }}>
           {data.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={data.coverUrl} alt="Book cover" style={{
