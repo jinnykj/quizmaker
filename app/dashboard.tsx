@@ -306,7 +306,7 @@ export default function Dashboard() {
   function setStyleProp(id: string, key: keyof StyleOverride, value: number) {
     setStyleOverrides((prev) => ({
       ...prev,
-      [id]: { scale: 1, letterSpacing: DEFAULT_LS[id] ?? 0, lineHeight: DEFAULT_LH[id] ?? 1.2, ...prev[id], [key]: value },
+      [id]: { ...{ scale: 1, letterSpacing: DEFAULT_LS[id] ?? 0, lineHeight: DEFAULT_LH[id] ?? 1.2 }, ...prev[id], [key]: value },
     }));
   }
 
