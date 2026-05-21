@@ -19,7 +19,7 @@ type Data = {
 };
 
 type Offsets = Record<string, { x: number; y: number }>;
-type StyleOverride = { scale: number; letterSpacing: number };
+type StyleOverride = { scale: number; letterSpacing: number; lineHeight: number };
 type StyleOverrides = Record<string, StyleOverride>;
 
 // Default letter-spacing per element (em)
@@ -30,6 +30,16 @@ const DEFAULT_LS: Record<string, number> = {
   "a-header":   0.13,
   "a-answer":   0,
   "a-bookinfo": -0.01,
+};
+
+// Default line-height per element
+const DEFAULT_LH: Record<string, number> = {
+  "q-header":   1.2,
+  "q-main":     0.92,
+  "q-footer":   1.2,
+  "a-header":   1.2,
+  "a-answer":   1,
+  "a-bookinfo": 1,
 };
 
 const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
@@ -135,13 +145,14 @@ function QuestionSlide({
 }) {
   function sc(id: string) { return styleOverrides?.[id]?.scale ?? 1; }
   function ls(id: string) { return styleOverrides?.[id]?.letterSpacing ?? (DEFAULT_LS[id] ?? 0); }
+  function lh(id: string) { return styleOverrides?.[id]?.lineHeight ?? (DEFAULT_LH[id] ?? 1.2); }
 
   return (
     <SlideShell divRef={divRef}>
       <D id="q-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "q-header"} style={{ zIndex: 3 }}>
         <div style={{
           fontFamily: FONT, fontSize: 26 * sc("q-header"),
-          letterSpacing: `${ls("q-header")}em`,
+          letterSpacing: `${ls("q-header")}em`, lineHeight: lh("q-header"),
           color: NAVY, textAlign: "center", fontWeight: 400,
         }}>
           ReadAway POP QUIZ{data.quizNumber ? ` #${data.quizNumber}` : ""}
@@ -152,7 +163,7 @@ function QuestionSlide({
         <div style={{
           fontFamily: FONT, fontSize: 215 * sc("q-main"),
           letterSpacing: `${ls("q-main")}em`,
-          fontWeight: 900, color: NAVY, lineHeight: 0.92,
+          fontWeight: 900, color: NAVY, lineHeight: lh("q-main"),
           whiteSpace: "pre-wrap", wordBreak: "break-word",
         }}>
           {data.keyword || "Keyword"}
@@ -160,7 +171,7 @@ function QuestionSlide({
         <div style={{
           fontFamily: FONT, fontSize: 50 * sc("q-main"),
           letterSpacing: `${ls("q-main")}em`,
-          fontWeight: 600, color: NAVY, marginTop: 52, lineHeight: 1.35,
+          fontWeight: 600, color: NAVY, marginTop: 52, lineHeight: lh("q-main"),
         }}>
           {data.questionType || "Which book is this from?"}
         </div>
@@ -169,7 +180,7 @@ function QuestionSlide({
       <D id="q-footer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "q-footer"} style={{ zIndex: 3 }}>
         <div style={{
           fontFamily: FONT, fontSize: 28 * sc("q-footer"),
-          letterSpacing: `${ls("q-footer")}em`,
+          letterSpacing: `${ls("q-footer")}em`, lineHeight: lh("q-footer"),
           color: NAVY, fontWeight: 400,
         }}>
           Swipe →
@@ -196,13 +207,14 @@ function AnswerSlide({
 }) {
   function sc(id: string) { return styleOverrides?.[id]?.scale ?? 1; }
   function ls(id: string) { return styleOverrides?.[id]?.letterSpacing ?? (DEFAULT_LS[id] ?? 0); }
+  function lh(id: string) { return styleOverrides?.[id]?.lineHeight ?? (DEFAULT_LH[id] ?? 1.2); }
 
   return (
     <SlideShell divRef={divRef}>
       <D id="a-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-header"} style={{ zIndex: 3 }}>
         <div style={{
           fontFamily: FONT, fontSize: 26 * sc("a-header"),
-          letterSpacing: `${ls("a-header")}em`,
+          letterSpacing: `${ls("a-header")}em`, lineHeight: lh("a-header"),
           color: NAVY, textAlign: "center", fontWeight: 400,
         }}>
           ReadAway POP QUIZ{data.quizNumber ? ` #${data.quizNumber}` : ""}
@@ -214,7 +226,7 @@ function AnswerSlide({
           <div style={{
             fontFamily: FONT, fontSize: 110 * sc("a-answer"),
             letterSpacing: `${ls("a-answer")}em`,
-            fontWeight: 700, fontStyle: "italic", color: NAVY, lineHeight: 1,
+            fontWeight: 700, fontStyle: "italic", color: NAVY, lineHeight: lh("a-answer"),
           }}>
             Answer
           </div>
@@ -242,7 +254,7 @@ function AnswerSlide({
           <div style={{
             fontFamily: FONT, fontSize: 96 * sc("a-bookinfo"),
             letterSpacing: `${ls("a-bookinfo")}em`,
-            fontWeight: 900, color: NAVY, lineHeight: 1,
+            fontWeight: 900, color: NAVY, lineHeight: lh("a-bookinfo"),
             whiteSpace: "pre-wrap", wordBreak: "break-word",
           }}>
             {data.bookTitle || "Book Title"}
@@ -294,7 +306,7 @@ export default function Dashboard() {
   function setStyleProp(id: string, key: keyof StyleOverride, value: number) {
     setStyleOverrides((prev) => ({
       ...prev,
-      [id]: { scale: 1, letterSpacing: DEFAULT_LS[id] ?? 0, ...prev[id], [key]: value },
+      [id]: { scale: 1, letterSpacing: DEFAULT_LS[id] ?? 0, lineHeight: DEFAULT_LH[id] ?? 1.2, ...prev[id], [key]: value },
     }));
   }
 
@@ -388,6 +400,7 @@ export default function Dashboard() {
   const selMeta = selected ? ELEM_META[selected] : null;
   const selScale = selected ? (styleOverrides[selected]?.scale ?? 1) : 1;
   const selLS = selected ? (styleOverrides[selected]?.letterSpacing ?? (DEFAULT_LS[selected] ?? 0)) : 0;
+  const selLH = selected ? (styleOverrides[selected]?.lineHeight ?? (DEFAULT_LH[selected] ?? 1.2)) : 1.2;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -434,6 +447,13 @@ export default function Dashboard() {
                   min={-10} max={50} step={1}
                   value={Math.round(selLS * 100)}
                   onChange={(v) => setStyleProp(selected, "letterSpacing", v / 100)}
+                />
+                <SliderRow
+                  label="행간"
+                  display={selLH.toFixed(2)}
+                  min={50} max={300} step={1}
+                  value={Math.round(selLH * 100)}
+                  onChange={(v) => setStyleProp(selected, "lineHeight", v / 100)}
                 />
               </>
             )}
