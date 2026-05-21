@@ -209,8 +209,24 @@ function AnswerSlide({
   function lh(id: string) { return styleOverrides?.[id]?.lineHeight ?? (DEFAULT_LH[id] ?? 1.2); }
 
   return (
-    <SlideShell divRef={divRef}>
-      <D id="a-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-header"} style={{ zIndex: 3 }}>
+    // 커스텀 shell: header 고정, 나머지 공간을 middle이 채우고 내부 space-between
+    <div
+      ref={divRef}
+      style={{
+        width: W, height: H, backgroundColor: CREAM,
+        position: "relative", display: "flex", flexDirection: "column",
+        alignItems: "center", padding: "72px 80px",
+        overflow: "hidden", flexShrink: 0,
+      }}
+    >
+      <div style={{
+        position: "absolute", inset: 36,
+        border: "1.5px solid rgba(29,52,97,0.28)",
+        pointerEvents: "none", zIndex: 2,
+      }} />
+
+      {/* Header - 상단 고정 */}
+      <D id="a-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-header"} style={{ zIndex: 3, flexShrink: 0 }}>
         <div style={{
           fontFamily: FONT, fontSize: 26 * sc("a-header"),
           letterSpacing: `${ls("a-header")}em`, lineHeight: lh("a-header"),
@@ -220,8 +236,14 @@ function AnswerSlide({
         </div>
       </D>
 
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 3 }}>
-        <D id="a-answer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-answer"} style={{ marginBottom: 36 }}>
+      {/* Middle - 남은 공간을 모두 차지하고 Answer/이미지/책제목 space-between */}
+      <div style={{
+        flex: 1, width: "100%",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "space-between",
+        paddingTop: 40, paddingBottom: 16, zIndex: 3,
+      }}>
+        <D id="a-answer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-answer"}>
           <div style={{
             fontFamily: FONT, fontSize: 110 * sc("a-answer"),
             letterSpacing: `${ls("a-answer")}em`,
@@ -231,7 +253,7 @@ function AnswerSlide({
           </div>
         </D>
 
-        <D id="a-cover" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-cover"} style={{ marginBottom: 36 }}>
+        <D id="a-cover" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-cover"}>
           {data.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={data.coverUrl} alt="Book cover" style={{
@@ -267,9 +289,7 @@ function AnswerSlide({
           </div>
         </D>
       </div>
-
-      <div style={{ height: 28 }} />
-    </SlideShell>
+    </div>
   );
 }
 
@@ -620,11 +640,12 @@ export default function Dashboard() {
         </SlidePreview>
       </div>
 
-      {/* ── Hidden export slides ── */}
-      <div style={{ position: "fixed", left: -W - 100, top: 0, zIndex: -1 }} aria-hidden>
+      {/* ── Export slides: viewport 안에 있지만 visibility:hidden으로 숨김 ── */}
+      {/* visibility:hidden은 html2canvas가 정상 렌더링함 (display:none은 불가) */}
+      <div style={{ position: "fixed", top: 0, left: 0, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <QuestionSlide data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides} />
       </div>
-      <div style={{ position: "fixed", left: -W - 100, top: 0, zIndex: -1 }} aria-hidden>
+      <div style={{ position: "fixed", top: 0, left: 0, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
         <AnswerSlide data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides} />
       </div>
     </div>
