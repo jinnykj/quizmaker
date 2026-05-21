@@ -19,14 +19,35 @@ type Data = {
 };
 
 type Offsets = Record<string, { x: number; y: number }>;
+type StyleOverride = { scale: number; letterSpacing: number };
+type StyleOverrides = Record<string, StyleOverride>;
+
+// Default letter-spacing per element (em)
+const DEFAULT_LS: Record<string, number> = {
+  "q-header":   0.13,
+  "q-main":     -0.015,
+  "q-footer":   0.08,
+  "a-header":   0.13,
+  "a-answer":   0,
+  "a-bookinfo": -0.01,
+};
+
+const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
+  "q-header":   { label: "ReadAway 헤더 (질문)", hasFont: true },
+  "q-main":     { label: "키워드 + 질문",         hasFont: true },
+  "q-footer":   { label: "Swipe →",             hasFont: true },
+  "a-header":   { label: "ReadAway 헤더 (답)",   hasFont: true },
+  "a-answer":   { label: "Answer",               hasFont: true },
+  "a-cover":    { label: "표지 이미지",            hasFont: false },
+  "a-bookinfo": { label: "책 제목 + 작가",         hasFont: true },
+};
 
 // ──────────────────────────────────────────────
 // Slide shell
 // ──────────────────────────────────────────────
 
 function SlideShell({
-  children,
-  divRef,
+  children, divRef,
 }: {
   children: React.ReactNode;
   divRef?: React.Ref<HTMLDivElement>;
@@ -52,32 +73,43 @@ function SlideShell({
 }
 
 // ──────────────────────────────────────────────
-// Draggable wrapper — only active when onStartDrag is provided
+// Draggable + selectable wrapper
 // ──────────────────────────────────────────────
 
 function D({
-  id, offsets, onStartDrag, style, children,
+  id, offsets, onStartDrag, onSelect, isSelected, style, children,
 }: {
   id: string;
   offsets?: Offsets;
   onStartDrag?: (id: string, e: React.MouseEvent) => void;
+  onSelect?: (id: string) => void;
+  isSelected?: boolean;
   style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
   const off = offsets?.[id] ?? { x: 0, y: 0 };
   const [hover, setHover] = useState(false);
+  const interactive = !!onStartDrag;
 
   return (
     <div
-      onMouseDown={onStartDrag ? (e) => { e.stopPropagation(); onStartDrag(id, e); } : undefined}
-      onMouseEnter={onStartDrag ? () => setHover(true) : undefined}
-      onMouseLeave={onStartDrag ? () => setHover(false) : undefined}
+      onMouseDown={interactive ? (e) => {
+        e.stopPropagation();
+        onSelect?.(id);
+        onStartDrag!(id, e);
+      } : undefined}
+      onMouseEnter={interactive ? () => setHover(true) : undefined}
+      onMouseLeave={interactive ? () => setHover(false) : undefined}
       style={{
         ...style,
         transform: `translate(${off.x}px, ${off.y}px)`,
-        cursor: onStartDrag ? "grab" : undefined,
+        cursor: interactive ? "grab" : undefined,
         userSelect: "none",
-        outline: hover && onStartDrag ? "2px dashed rgba(29,52,97,0.35)" : undefined,
+        outline: interactive
+          ? isSelected
+            ? "2.5px solid rgba(29,52,97,0.65)"
+            : hover ? "2px dashed rgba(29,52,97,0.35)" : undefined
+          : undefined,
         outlineOffset: "8px",
       }}
     >
@@ -91,44 +123,54 @@ function D({
 // ──────────────────────────────────────────────
 
 function QuestionSlide({
-  data, divRef, offsets, onStartDrag,
+  data, divRef, offsets, styleOverrides, onStartDrag, onSelect, selected,
 }: {
   data: Data;
   divRef?: React.Ref<HTMLDivElement>;
   offsets?: Offsets;
+  styleOverrides?: StyleOverrides;
   onStartDrag?: (id: string, e: React.MouseEvent) => void;
+  onSelect?: (id: string) => void;
+  selected?: string | null;
 }) {
+  function sc(id: string) { return styleOverrides?.[id]?.scale ?? 1; }
+  function ls(id: string) { return styleOverrides?.[id]?.letterSpacing ?? (DEFAULT_LS[id] ?? 0); }
+
   return (
     <SlideShell divRef={divRef}>
-      <D id="q-header" offsets={offsets} onStartDrag={onStartDrag} style={{ zIndex: 3 }}>
+      <D id="q-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "q-header"} style={{ zIndex: 3 }}>
         <div style={{
-          fontFamily: FONT, fontSize: 26, letterSpacing: "0.13em",
+          fontFamily: FONT, fontSize: 26 * sc("q-header"),
+          letterSpacing: `${ls("q-header")}em`,
           color: NAVY, textAlign: "center", fontWeight: 400,
         }}>
           ReadAway POP QUIZ{data.quizNumber ? ` #${data.quizNumber}` : ""}
         </div>
       </D>
 
-      <D id="q-main" offsets={offsets} onStartDrag={onStartDrag} style={{ textAlign: "center", zIndex: 3, padding: "0 20px" }}>
+      <D id="q-main" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "q-main"} style={{ textAlign: "center", zIndex: 3, padding: "0 20px" }}>
         <div style={{
-          fontFamily: FONT, fontSize: 215, fontWeight: 900,
-          color: NAVY, lineHeight: 0.92, letterSpacing: "-0.015em",
+          fontFamily: FONT, fontSize: 215 * sc("q-main"),
+          letterSpacing: `${ls("q-main")}em`,
+          fontWeight: 900, color: NAVY, lineHeight: 0.92,
           whiteSpace: "pre-wrap", wordBreak: "break-word",
         }}>
           {data.keyword || "Keyword"}
         </div>
         <div style={{
-          fontFamily: FONT, fontSize: 50, fontWeight: 600,
-          color: NAVY, marginTop: 52, lineHeight: 1.35,
+          fontFamily: FONT, fontSize: 50 * sc("q-main"),
+          letterSpacing: `${ls("q-main")}em`,
+          fontWeight: 600, color: NAVY, marginTop: 52, lineHeight: 1.35,
         }}>
           {data.questionType || "Which book is this from?"}
         </div>
       </D>
 
-      <D id="q-footer" offsets={offsets} onStartDrag={onStartDrag} style={{ zIndex: 3 }}>
+      <D id="q-footer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "q-footer"} style={{ zIndex: 3 }}>
         <div style={{
-          fontFamily: FONT, fontSize: 28, color: NAVY,
-          letterSpacing: "0.08em", fontWeight: 400,
+          fontFamily: FONT, fontSize: 28 * sc("q-footer"),
+          letterSpacing: `${ls("q-footer")}em`,
+          color: NAVY, fontWeight: 400,
         }}>
           Swipe →
         </div>
@@ -142,18 +184,25 @@ function QuestionSlide({
 // ──────────────────────────────────────────────
 
 function AnswerSlide({
-  data, divRef, offsets, onStartDrag,
+  data, divRef, offsets, styleOverrides, onStartDrag, onSelect, selected,
 }: {
   data: Data;
   divRef?: React.Ref<HTMLDivElement>;
   offsets?: Offsets;
+  styleOverrides?: StyleOverrides;
   onStartDrag?: (id: string, e: React.MouseEvent) => void;
+  onSelect?: (id: string) => void;
+  selected?: string | null;
 }) {
+  function sc(id: string) { return styleOverrides?.[id]?.scale ?? 1; }
+  function ls(id: string) { return styleOverrides?.[id]?.letterSpacing ?? (DEFAULT_LS[id] ?? 0); }
+
   return (
     <SlideShell divRef={divRef}>
-      <D id="a-header" offsets={offsets} onStartDrag={onStartDrag} style={{ zIndex: 3 }}>
+      <D id="a-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-header"} style={{ zIndex: 3 }}>
         <div style={{
-          fontFamily: FONT, fontSize: 26, letterSpacing: "0.13em",
+          fontFamily: FONT, fontSize: 26 * sc("a-header"),
+          letterSpacing: `${ls("a-header")}em`,
           color: NAVY, textAlign: "center", fontWeight: 400,
         }}>
           ReadAway POP QUIZ{data.quizNumber ? ` #${data.quizNumber}` : ""}
@@ -161,16 +210,17 @@ function AnswerSlide({
       </D>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 36, zIndex: 3 }}>
-        <D id="a-answer" offsets={offsets} onStartDrag={onStartDrag}>
+        <D id="a-answer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-answer"}>
           <div style={{
-            fontFamily: FONT, fontSize: 110, fontWeight: 700,
-            fontStyle: "italic", color: NAVY, lineHeight: 1,
+            fontFamily: FONT, fontSize: 110 * sc("a-answer"),
+            letterSpacing: `${ls("a-answer")}em`,
+            fontWeight: 700, fontStyle: "italic", color: NAVY, lineHeight: 1,
           }}>
             Answer
           </div>
         </D>
 
-        <D id="a-cover" offsets={offsets} onStartDrag={onStartDrag}>
+        <D id="a-cover" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-cover"}>
           {data.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={data.coverUrl} alt="Book cover" style={{
@@ -188,17 +238,19 @@ function AnswerSlide({
           )}
         </D>
 
-        <D id="a-bookinfo" offsets={offsets} onStartDrag={onStartDrag} style={{ textAlign: "center" }}>
+        <D id="a-bookinfo" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect} isSelected={selected === "a-bookinfo"} style={{ textAlign: "center" }}>
           <div style={{
-            fontFamily: FONT, fontSize: 96, fontWeight: 900,
-            color: NAVY, lineHeight: 1, letterSpacing: "-0.01em",
+            fontFamily: FONT, fontSize: 96 * sc("a-bookinfo"),
+            letterSpacing: `${ls("a-bookinfo")}em`,
+            fontWeight: 900, color: NAVY, lineHeight: 1,
             whiteSpace: "pre-wrap", wordBreak: "break-word",
           }}>
             {data.bookTitle || "Book Title"}
           </div>
           <div style={{
-            fontFamily: FONT, fontSize: 44, fontWeight: 500,
-            color: NAVY, marginTop: 18,
+            fontFamily: FONT, fontSize: 44 * sc("a-bookinfo"),
+            letterSpacing: `${ls("a-bookinfo")}em`,
+            fontWeight: 500, color: NAVY, marginTop: 18,
           }}>
             by {data.author || "Author"}
           </div>
@@ -224,13 +276,11 @@ const QUESTION_PRESETS = [
 export default function Dashboard() {
   const [dropActive, setDropActive] = useState(false);
   const [offsets, setOffsets] = useState<Offsets>({});
+  const [styleOverrides, setStyleOverrides] = useState<StyleOverrides>({});
+  const [selected, setSelected] = useState<string | null>(null);
   const [data, setData] = useState<Data>({
-    quizNumber: "",
-    keyword: "",
-    questionType: "Which book is this place from?",
-    bookTitle: "",
-    author: "",
-    coverUrl: "",
+    quizNumber: "", keyword: "", questionType: "Which book is this place from?",
+    bookTitle: "", author: "", coverUrl: "",
   });
 
   const questionRef = useRef<HTMLDivElement>(null);
@@ -239,6 +289,13 @@ export default function Dashboard() {
 
   function set(field: keyof Data, value: string) {
     setData((d) => ({ ...d, [field]: value }));
+  }
+
+  function setStyleProp(id: string, key: keyof StyleOverride, value: number) {
+    setStyleOverrides((prev) => ({
+      ...prev,
+      [id]: { scale: 1, letterSpacing: DEFAULT_LS[id] ?? 0, ...prev[id], [key]: value },
+    }));
   }
 
   function loadImageFile(file: File) {
@@ -260,6 +317,7 @@ export default function Dashboard() {
     if (file) loadImageFile(file);
   }
 
+  // Paste image
   useEffect(() => {
     function onPaste(e: ClipboardEvent) {
       const item = Array.from(e.clipboardData?.items ?? []).find(
@@ -273,6 +331,26 @@ export default function Dashboard() {
     return () => window.removeEventListener("paste", onPaste);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Arrow key movement
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!selected) return;
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
+      const tag = (document.activeElement as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      e.preventDefault();
+      const step = e.shiftKey ? 50 : 10;
+      const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+      const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+      setOffsets((prev) => ({
+        ...prev,
+        [selected]: { x: (prev[selected]?.x ?? 0) + dx, y: (prev[selected]?.y ?? 0) + dy },
+      }));
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selected]);
 
   function startDrag(id: string, e: React.MouseEvent) {
     dragState.current = { id, lastX: e.clientX, lastY: e.clientY };
@@ -291,20 +369,14 @@ export default function Dashboard() {
     }));
   }
 
-  function stopDrag() {
-    dragState.current = null;
-  }
+  function stopDrag() { dragState.current = null; }
 
-  async function downloadSlide(
-    ref: React.RefObject<HTMLDivElement | null>,
-    filename: string
-  ) {
+  async function downloadSlide(ref: React.RefObject<HTMLDivElement | null>, filename: string) {
     if (!ref.current) return;
     await document.fonts.ready;
     const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(ref.current, {
-      scale: 1, useCORS: true, allowTaint: true,
-      backgroundColor: null, logging: false,
+      scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, logging: false,
     });
     const link = document.createElement("a");
     link.download = filename;
@@ -313,10 +385,13 @@ export default function Dashboard() {
   }
 
   const suffix = data.quizNumber ? `-${data.quizNumber}` : "";
+  const selMeta = selected ? ELEM_META[selected] : null;
+  const selScale = selected ? (styleOverrides[selected]?.scale ?? 1) : 1;
+  const selLS = selected ? (styleOverrides[selected]?.letterSpacing ?? (DEFAULT_LS[selected] ?? 0)) : 0;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      {/* ── Left form panel ── */}
+      {/* ── Left panel ── */}
       <div style={{
         width: 380, minHeight: "100vh", background: "#fff",
         padding: "40px 28px", borderRight: "1px solid #e8e0d5",
@@ -325,8 +400,67 @@ export default function Dashboard() {
         <h1 style={{ fontFamily: FONT, fontSize: 22, fontWeight: 700, color: NAVY, marginBottom: 4 }}>
           ReadAway Quiz Maker
         </h1>
-        <p style={{ fontSize: 13, color: "#999", marginBottom: 32 }}>팝퀴즈 이미지 생성기</p>
+        <p style={{ fontSize: 13, color: "#999", marginBottom: 24 }}>팝퀴즈 이미지 생성기</p>
 
+        {/* ── Selected element controls ── */}
+        {selected && selMeta && (
+          <div style={{
+            marginBottom: 24, padding: "16px 18px",
+            background: "#f8f6f2", borderRadius: 8,
+            border: "1.5px solid #ddd8ce",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: NAVY, letterSpacing: "0.04em" }}>
+                {selMeta.label}
+              </span>
+              <button onClick={() => setSelected(null)} style={{
+                fontSize: 11, color: "#aaa", background: "none",
+                border: "none", cursor: "pointer", padding: 0,
+              }}>닫기 ✕</button>
+            </div>
+
+            {selMeta.hasFont && (
+              <>
+                <SliderRow
+                  label="크기"
+                  display={`${Math.round(selScale * 100)}%`}
+                  min={40} max={200} step={1}
+                  value={Math.round(selScale * 100)}
+                  onChange={(v) => setStyleProp(selected, "scale", v / 100)}
+                />
+                <SliderRow
+                  label="자간"
+                  display={`${selLS.toFixed(2)}em`}
+                  min={-10} max={50} step={1}
+                  value={Math.round(selLS * 100)}
+                  onChange={(v) => setStyleProp(selected, "letterSpacing", v / 100)}
+                />
+              </>
+            )}
+
+            <div style={{ fontSize: 11, color: "#bbb", marginTop: selMeta.hasFont ? 10 : 0 }}>
+              방향키로 이동 &nbsp;·&nbsp; Shift+방향키로 큰 이동
+            </div>
+
+            {(styleOverrides[selected] || offsets[selected]) && (
+              <button
+                onClick={() => {
+                  setStyleOverrides((p) => { const n = { ...p }; delete n[selected]; return n; });
+                  setOffsets((p) => { const n = { ...p }; delete n[selected]; return n; });
+                }}
+                style={{
+                  marginTop: 10, fontSize: 11, color: "#aaa",
+                  background: "none", border: "none", cursor: "pointer",
+                  textDecoration: "underline", padding: 0,
+                }}
+              >
+                이 요소 초기화
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Form ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <Field label="퀴즈 번호 (선택)">
             <input type="number" value={data.quizNumber}
@@ -419,25 +553,25 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {Object.keys(offsets).length > 0 && (
-            <button onClick={() => setOffsets({})} style={{
+          {(Object.keys(offsets).length > 0 || Object.keys(styleOverrides).length > 0) && (
+            <button onClick={() => { setOffsets({}); setStyleOverrides({}); }} style={{
               padding: "8px 0", background: "transparent",
               border: "1.5px solid #e0d8ce", borderRadius: 6,
               fontSize: 12, color: "#aaa", cursor: "pointer", fontFamily: "inherit",
             }}>
-              위치 초기화
+              전체 초기화
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Right preview panel ── */}
+      {/* ── Preview panel ── */}
       <div style={{
         flex: 1, padding: "40px 32px", overflowY: "auto",
         display: "flex", flexDirection: "column", gap: 32, alignItems: "center",
       }}>
         <p style={{ fontSize: 12, color: "#bbb", margin: 0 }}>
-          미리보기에서 요소를 드래그해 위치를 조정할 수 있습니다
+          요소 클릭으로 선택 · 드래그 또는 방향키로 이동 · 크기·자간은 왼쪽 패널에서 조정
         </p>
 
         <SlidePreview
@@ -445,8 +579,12 @@ export default function Dashboard() {
           onMouseMove={onPreviewMouseMove}
           onMouseUp={stopDrag}
           onMouseLeave={stopDrag}
+          onMouseDown={() => setSelected(null)}
         >
-          <QuestionSlide data={data} offsets={offsets} onStartDrag={startDrag} />
+          <QuestionSlide
+            data={data} offsets={offsets} styleOverrides={styleOverrides}
+            onStartDrag={startDrag} onSelect={setSelected} selected={selected}
+          />
         </SlidePreview>
 
         <SlidePreview
@@ -454,17 +592,21 @@ export default function Dashboard() {
           onMouseMove={onPreviewMouseMove}
           onMouseUp={stopDrag}
           onMouseLeave={stopDrag}
+          onMouseDown={() => setSelected(null)}
         >
-          <AnswerSlide data={data} offsets={offsets} onStartDrag={startDrag} />
+          <AnswerSlide
+            data={data} offsets={offsets} styleOverrides={styleOverrides}
+            onStartDrag={startDrag} onSelect={setSelected} selected={selected}
+          />
         </SlidePreview>
       </div>
 
-      {/* ── Hidden full-size slides for export ── */}
+      {/* ── Hidden export slides ── */}
       <div style={{ position: "fixed", left: -W - 100, top: 0, zIndex: -1 }} aria-hidden>
-        <QuestionSlide data={data} divRef={questionRef} offsets={offsets} />
+        <QuestionSlide data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides} />
       </div>
       <div style={{ position: "fixed", left: -W - 100, top: 0, zIndex: -1 }} aria-hidden>
-        <AnswerSlide data={data} divRef={answerRef} offsets={offsets} />
+        <AnswerSlide data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides} />
       </div>
     </div>
   );
@@ -474,13 +616,30 @@ export default function Dashboard() {
 // Helpers
 // ──────────────────────────────────────────────
 
-function Field({
-  label, hint, children,
+function SliderRow({
+  label, display, min, max, step, value, onChange,
 }: {
   label: string;
-  hint?: string;
-  children: React.ReactNode;
+  display: string;
+  min: number; max: number; step: number; value: number;
+  onChange: (v: number) => void;
 }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 12, color: "#666", fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: 12, color: NAVY, fontWeight: 600, fontFamily: "monospace" }}>{display}</span>
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ width: "100%", accentColor: NAVY }}
+      />
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -493,13 +652,14 @@ function Field({
 }
 
 function SlidePreview({
-  label, children, onMouseMove, onMouseUp, onMouseLeave,
+  label, children, onMouseMove, onMouseUp, onMouseLeave, onMouseDown,
 }: {
   label: string;
   children: React.ReactNode;
   onMouseMove?: (e: React.MouseEvent) => void;
   onMouseUp?: () => void;
   onMouseLeave?: () => void;
+  onMouseDown?: () => void;
 }) {
   return (
     <div>
@@ -514,10 +674,10 @@ function SlidePreview({
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseLeave}
+        onMouseDown={onMouseDown}
         style={{
           width: W * SCALE, height: H * SCALE,
-          overflow: "hidden",
-          boxShadow: "0 8px 36px rgba(0,0,0,0.14)",
+          overflow: "hidden", boxShadow: "0 8px 36px rgba(0,0,0,0.14)",
           borderRadius: 4, flexShrink: 0,
         }}
       >
