@@ -404,11 +404,21 @@ export default function Dashboard() {
 
   async function downloadSlide(ref: React.RefObject<HTMLDivElement | null>, filename: string) {
     if (!ref.current) return;
+    setSelected(null);
+    await new Promise<void>((r) => setTimeout(r, 50));
     await document.fonts.ready;
+    const clone = ref.current.cloneNode(true) as HTMLElement;
+    clone.style.position = "fixed";
+    clone.style.top = "0";
+    clone.style.left = "0";
+    clone.style.zIndex = "99999";
+    clone.style.pointerEvents = "none";
+    document.body.appendChild(clone);
     const { default: html2canvas } = await import("html2canvas");
-    const canvas = await html2canvas(ref.current, {
+    const canvas = await html2canvas(clone, {
       scale: 1, useCORS: true, allowTaint: true, backgroundColor: null, logging: false,
     });
+    document.body.removeChild(clone);
     const link = document.createElement("a");
     link.download = filename;
     link.href = canvas.toDataURL("image/png");
@@ -621,7 +631,7 @@ export default function Dashboard() {
           onMouseDown={() => setSelected(null)}
         >
           <QuestionSlide
-            data={data} offsets={offsets} styleOverrides={styleOverrides}
+            data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides}
             onStartDrag={startDrag} onSelect={setSelected} selected={selected}
           />
         </SlidePreview>
@@ -634,19 +644,12 @@ export default function Dashboard() {
           onMouseDown={() => setSelected(null)}
         >
           <AnswerSlide
-            data={data} offsets={offsets} styleOverrides={styleOverrides}
+            data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides}
             onStartDrag={startDrag} onSelect={setSelected} selected={selected}
           />
         </SlidePreview>
       </div>
 
-      {/* ── Export slides: (0,0)에 z-index:-1로 UI 뒤에 숨김, html2canvas는 정상 캡처 ── */}
-      <div style={{ position: "fixed", top: 0, left: 0, zIndex: -1, pointerEvents: "none" }} aria-hidden>
-        <QuestionSlide data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides} />
-      </div>
-      <div style={{ position: "fixed", top: 0, left: 0, zIndex: -1, pointerEvents: "none" }} aria-hidden>
-        <AnswerSlide data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides} />
-      </div>
     </div>
   );
 }
