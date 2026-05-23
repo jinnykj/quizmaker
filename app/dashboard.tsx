@@ -640,12 +640,11 @@ export default function Dashboard() {
         </SlidePreview>
       </div>
 
-      {/* ── Export slides: viewport 안에 있지만 visibility:hidden으로 숨김 ── */}
-      {/* visibility:hidden은 html2canvas가 정상 렌더링함 (display:none은 불가) */}
-      <div style={{ position: "fixed", top: 0, left: 0, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
+      {/* ── Export slides: (0,0)에 z-index:-1로 UI 뒤에 숨김, html2canvas는 정상 캡처 ── */}
+      <div style={{ position: "fixed", top: 0, left: 0, zIndex: -1, pointerEvents: "none" }} aria-hidden>
         <QuestionSlide data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides} />
       </div>
-      <div style={{ position: "fixed", top: 0, left: 0, visibility: "hidden", pointerEvents: "none" }} aria-hidden>
+      <div style={{ position: "fixed", top: 0, left: 0, zIndex: -1, pointerEvents: "none" }} aria-hidden>
         <AnswerSlide data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides} />
       </div>
     </div>
