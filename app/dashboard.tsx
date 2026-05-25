@@ -13,6 +13,11 @@ type Data = {
   quizNumber: string;
   keyword: string;
   questionType: string;
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
   bookTitle: string;
   author: string;
   coverUrl: string;
@@ -30,6 +35,10 @@ const DEFAULT_LS: Record<string, number> = {
   "a-header":   0.13,
   "a-answer":   0,
   "a-bookinfo": -0.01,
+  "m-header":   0.13,
+  "m-question": 0.01,
+  "m-options":  0.01,
+  "m-footer":   0.08,
 };
 
 // Default line-height per element
@@ -40,6 +49,10 @@ const DEFAULT_LH: Record<string, number> = {
   "a-header":   1.2,
   "a-answer":   1,
   "a-bookinfo": 1,
+  "m-header":   1.2,
+  "m-question": 1.35,
+  "m-options":  1.5,
+  "m-footer":   1.2,
 };
 
 const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
@@ -50,6 +63,10 @@ const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
   "a-answer":   { label: "Answer",               hasFont: true },
   "a-cover":    { label: "표지 이미지",            hasFont: false },
   "a-bookinfo": { label: "책 제목 + 작가",         hasFont: true },
+  "m-header":   { label: "ReadAway 헤더 (MCQ)",  hasFont: true },
+  "m-question": { label: "문제 텍스트",            hasFont: true },
+  "m-options":  { label: "보기 A–D",              hasFont: true },
+  "m-footer":   { label: "Swipe →",              hasFont: true },
 };
 
 // ──────────────────────────────────────────────
@@ -294,6 +311,112 @@ function AnswerSlide({
 }
 
 // ──────────────────────────────────────────────
+// MCQ slide
+// ──────────────────────────────────────────────
+
+function MCQSlide({
+  data, divRef, offsets, styleOverrides, onStartDrag, onSelect, selected,
+}: {
+  data: Data;
+  divRef?: React.Ref<HTMLDivElement>;
+  offsets?: Offsets;
+  styleOverrides?: StyleOverrides;
+  onStartDrag?: (id: string, e: React.MouseEvent) => void;
+  onSelect?: (id: string) => void;
+  selected?: string | null;
+}) {
+  function sc(id: string) { return styleOverrides?.[id]?.scale ?? 1; }
+  function ls(id: string) { return styleOverrides?.[id]?.letterSpacing ?? (DEFAULT_LS[id] ?? 0); }
+  function lh(id: string) { return styleOverrides?.[id]?.lineHeight ?? (DEFAULT_LH[id] ?? 1.2); }
+
+  const options = [
+    { label: "A", text: data.optionA || "Option A" },
+    { label: "B", text: data.optionB || "Option B" },
+    { label: "C", text: data.optionC || "Option C" },
+    { label: "D", text: data.optionD || "Option D" },
+  ];
+
+  return (
+    <div
+      ref={divRef}
+      style={{
+        width: W, height: H, backgroundColor: CREAM,
+        position: "relative", display: "flex", flexDirection: "column",
+        alignItems: "center", padding: "72px 80px",
+        overflow: "hidden", flexShrink: 0,
+      }}
+    >
+      <div style={{
+        position: "absolute", inset: 36,
+        border: "1.5px solid rgba(29,52,97,0.28)",
+        pointerEvents: "none", zIndex: 2,
+      }} />
+
+      {/* Header */}
+      <D id="m-header" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
+        isSelected={selected === "m-header"} style={{ zIndex: 3, flexShrink: 0 }}>
+        <div style={{
+          fontFamily: FONT, fontSize: 26 * sc("m-header"),
+          letterSpacing: `${ls("m-header")}em`, lineHeight: lh("m-header"),
+          color: NAVY, textAlign: "center", fontWeight: 400,
+        }}>
+          ReadAway POP QUIZ{data.quizNumber ? ` #${data.quizNumber}` : ""}
+        </div>
+      </D>
+
+      {/* Middle — question + options */}
+      <div style={{
+        flex: 1, width: "100%",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        gap: 56, paddingTop: 24, paddingBottom: 24, zIndex: 3,
+      }}>
+        <D id="m-question" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
+          isSelected={selected === "m-question"} style={{ width: "100%", textAlign: "center" }}>
+          <div style={{
+            fontFamily: FONT, fontSize: 44 * sc("m-question"),
+            letterSpacing: `${ls("m-question")}em`, lineHeight: lh("m-question"),
+            fontWeight: 600, color: NAVY,
+            whiteSpace: "pre-wrap", wordBreak: "break-word",
+          }}>
+            {data.question || "Question text goes here?"}
+          </div>
+        </D>
+
+        <D id="m-options" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
+          isSelected={selected === "m-options"} style={{ width: "100%", padding: "0 10px" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {options.map(({ label, text }) => (
+              <div key={label} style={{
+                fontFamily: FONT, fontSize: 42 * sc("m-options"),
+                letterSpacing: `${ls("m-options")}em`, lineHeight: lh("m-options"),
+                fontWeight: 500, color: NAVY,
+                display: "flex", gap: 18, alignItems: "flex-start",
+              }}>
+                <span style={{ fontWeight: 700, flexShrink: 0 }}>{label})</span>
+                <span style={{ wordBreak: "break-word" }}>{text}</span>
+              </div>
+            ))}
+          </div>
+        </D>
+      </div>
+
+      {/* Footer */}
+      <D id="m-footer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
+        isSelected={selected === "m-footer"} style={{ zIndex: 3, flexShrink: 0 }}>
+        <div style={{
+          fontFamily: FONT, fontSize: 28 * sc("m-footer"),
+          letterSpacing: `${ls("m-footer")}em`, lineHeight: lh("m-footer"),
+          color: NAVY, fontWeight: 400,
+        }}>
+          Swipe →
+        </div>
+      </D>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
 // Dashboard
 // ──────────────────────────────────────────────
 
@@ -309,8 +432,10 @@ export default function Dashboard() {
   const [offsets, setOffsets] = useState<Offsets>({});
   const [styleOverrides, setStyleOverrides] = useState<StyleOverrides>({});
   const [selected, setSelected] = useState<string | null>(null);
+  const [quizMode, setQuizMode] = useState<"keyword" | "mcq">("keyword");
   const [data, setData] = useState<Data>({
     quizNumber: "", keyword: "", questionType: "Which book is this place from?",
+    question: "", optionA: "", optionB: "", optionC: "", optionD: "",
     bookTitle: "", author: "", coverUrl: "",
   });
 
@@ -442,7 +567,25 @@ export default function Dashboard() {
         <h1 style={{ fontFamily: FONT, fontSize: 22, fontWeight: 700, color: NAVY, marginBottom: 4 }}>
           ReadAway Quiz Maker
         </h1>
-        <p style={{ fontSize: 13, color: "#999", marginBottom: 24 }}>팝퀴즈 이미지 생성기</p>
+        <p style={{ fontSize: 13, color: "#999", marginBottom: 16 }}>팝퀴즈 이미지 생성기</p>
+
+        {/* ── Mode toggle ── */}
+        <div style={{
+          display: "flex", marginBottom: 24,
+          border: "1.5px solid #e0d8ce", borderRadius: 6, overflow: "hidden",
+        }}>
+          {(["keyword", "mcq"] as const).map((mode) => (
+            <button key={mode} onClick={() => { setQuizMode(mode); setSelected(null); }} style={{
+              flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 600,
+              background: quizMode === mode ? NAVY : "#fff",
+              color: quizMode === mode ? "#fff" : "#888",
+              border: "none", cursor: "pointer", fontFamily: "inherit",
+              letterSpacing: "0.03em",
+            }}>
+              {mode === "keyword" ? "키워드 퀴즈" : "객관식 퀴즈"}
+            </button>
+          ))}
+        </div>
 
         {/* ── Selected element controls ── */}
         {selected && selMeta && (
@@ -517,32 +660,53 @@ export default function Dashboard() {
               placeholder="예: 21" style={inputCss} />
           </Field>
 
-          <Field label="키워드 *" hint="Enter로 줄바꿈">
-            <textarea value={data.keyword}
-              onChange={(e) => set("keyword", e.target.value)}
-              placeholder={"예: Tupelo\nLanding"}
-              rows={2} style={{ ...inputCss, resize: "vertical" }} />
-          </Field>
+          {quizMode === "keyword" ? (
+            <>
+              <Field label="키워드 *" hint="Enter로 줄바꿈">
+                <textarea value={data.keyword}
+                  onChange={(e) => set("keyword", e.target.value)}
+                  placeholder={"예: Tupelo\nLanding"}
+                  rows={2} style={{ ...inputCss, resize: "vertical" }} />
+              </Field>
 
-          <Field label="질문 유형 *">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-              {QUESTION_PRESETS.map((q) => (
-                <button key={q} onClick={() => set("questionType", q)} style={{
-                  padding: "4px 10px", fontSize: 12,
-                  border: `1.5px solid ${data.questionType === q ? NAVY : "#ddd"}`,
-                  borderRadius: 20,
-                  background: data.questionType === q ? NAVY : "#fff",
-                  color: data.questionType === q ? "#fff" : "#555",
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>
-                  {q.replace("Which book is this ", "").replace("?", "")}
-                </button>
+              <Field label="질문 유형 *">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  {QUESTION_PRESETS.map((q) => (
+                    <button key={q} onClick={() => set("questionType", q)} style={{
+                      padding: "4px 10px", fontSize: 12,
+                      border: `1.5px solid ${data.questionType === q ? NAVY : "#ddd"}`,
+                      borderRadius: 20,
+                      background: data.questionType === q ? NAVY : "#fff",
+                      color: data.questionType === q ? "#fff" : "#555",
+                      cursor: "pointer", fontFamily: "inherit",
+                    }}>
+                      {q.replace("Which book is this ", "").replace("?", "")}
+                    </button>
+                  ))}
+                </div>
+                <input type="text" value={data.questionType}
+                  onChange={(e) => set("questionType", e.target.value)}
+                  placeholder="직접 입력..." style={inputCss} />
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field label="문제 *" hint="Enter로 줄바꿈">
+                <textarea value={data.question}
+                  onChange={(e) => set("question", e.target.value)}
+                  placeholder="예: On Halloween, Auggie changes his mind..."
+                  rows={4} style={{ ...inputCss, resize: "vertical" }} />
+              </Field>
+
+              {(["A", "B", "C", "D"] as const).map((letter) => (
+                <Field key={letter} label={`보기 ${letter}`}>
+                  <input type="text" value={data[`option${letter}` as keyof Data]}
+                    onChange={(e) => set(`option${letter}` as keyof Data, e.target.value)}
+                    placeholder={`보기 ${letter}`} style={inputCss} />
+                </Field>
               ))}
-            </div>
-            <input type="text" value={data.questionType}
-              onChange={(e) => set("questionType", e.target.value)}
-              placeholder="직접 입력..." style={inputCss} />
-          </Field>
+            </>
+          )}
 
           <div style={{
             borderTop: "1px solid #f0ebe4", paddingTop: 18,
@@ -624,16 +788,23 @@ export default function Dashboard() {
         </p>
 
         <SlidePreview
-          label="질문 슬라이드"
+          label={quizMode === "keyword" ? "질문 슬라이드" : "객관식 슬라이드"}
           onMouseMove={onPreviewMouseMove}
           onMouseUp={stopDrag}
           onMouseLeave={stopDrag}
           onMouseDown={() => setSelected(null)}
         >
-          <QuestionSlide
-            data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides}
-            onStartDrag={startDrag} onSelect={setSelected} selected={selected}
-          />
+          {quizMode === "keyword" ? (
+            <QuestionSlide
+              data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides}
+              onStartDrag={startDrag} onSelect={setSelected} selected={selected}
+            />
+          ) : (
+            <MCQSlide
+              data={data} divRef={questionRef} offsets={offsets} styleOverrides={styleOverrides}
+              onStartDrag={startDrag} onSelect={setSelected} selected={selected}
+            />
+          )}
         </SlidePreview>
 
         <SlidePreview
