@@ -747,7 +747,7 @@ export default function Dashboard() {
             fontSize: 12, fontWeight: 600, color: "#aaa",
             letterSpacing: "0.06em", textTransform: "uppercase",
           }}>
-            답 슬라이드
+            {quizMode === "keyword" ? "답 슬라이드" : "책 정보"}
           </div>
 
           <Field label="책 제목 *" hint="Enter로 줄바꿈">
@@ -793,11 +793,13 @@ export default function Dashboard() {
 
           <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
             <button onClick={() => downloadSlide(questionRef, `quiz-question${suffix}.png`)} style={btnCss(NAVY)}>
-              질문 저장
+              {quizMode === "keyword" ? "질문 저장" : "저장"}
             </button>
-            <button onClick={() => downloadSlide(answerRef, `quiz-answer${suffix}.png`)} style={btnCss("#4a6741")}>
-              답 저장
-            </button>
+            {quizMode === "keyword" && (
+              <button onClick={() => downloadSlide(answerRef, `quiz-answer${suffix}.png`)} style={btnCss("#4a6741")}>
+                답 저장
+              </button>
+            )}
           </div>
 
           {(Object.keys(offsets).length > 0 || Object.keys(styleOverrides).length > 0) && (
@@ -841,18 +843,20 @@ export default function Dashboard() {
           )}
         </SlidePreview>
 
-        <SlidePreview
-          label="답 슬라이드"
-          onMouseMove={onPreviewMouseMove}
-          onMouseUp={stopDrag}
-          onMouseLeave={stopDrag}
-          onMouseDown={() => setSelected(null)}
-        >
-          <AnswerSlide
-            data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides}
-            onStartDrag={startDrag} onSelect={setSelected} selected={selected}
-          />
-        </SlidePreview>
+        {quizMode === "keyword" && (
+          <SlidePreview
+            label="답 슬라이드"
+            onMouseMove={onPreviewMouseMove}
+            onMouseUp={stopDrag}
+            onMouseLeave={stopDrag}
+            onMouseDown={() => setSelected(null)}
+          >
+            <AnswerSlide
+              data={data} divRef={answerRef} offsets={offsets} styleOverrides={styleOverrides}
+              onStartDrag={startDrag} onSelect={setSelected} selected={selected}
+            />
+          </SlidePreview>
+        )}
       </div>
 
     </div>
