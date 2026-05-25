@@ -36,6 +36,7 @@ const DEFAULT_LS: Record<string, number> = {
   "a-answer":   0,
   "a-bookinfo": -0.01,
   "m-header":   0.13,
+  "m-bookinfo": -0.01,
   "m-question": 0.01,
   "m-options":  0.01,
   "m-footer":   0.08,
@@ -50,6 +51,7 @@ const DEFAULT_LH: Record<string, number> = {
   "a-answer":   1,
   "a-bookinfo": 1,
   "m-header":   1.2,
+  "m-bookinfo": 1.1,
   "m-question": 1.35,
   "m-options":  1.5,
   "m-footer":   1.2,
@@ -64,6 +66,7 @@ const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
   "a-cover":    { label: "표지 이미지",            hasFont: false },
   "a-bookinfo": { label: "책 제목 + 작가",         hasFont: true },
   "m-header":   { label: "ReadAway 헤더 (MCQ)",  hasFont: true },
+  "m-bookinfo": { label: "표지 + 제목 (MCQ)",     hasFont: true },
   "m-question": { label: "문제 텍스트",            hasFont: true },
   "m-options":  { label: "보기 A–D",              hasFont: true },
   "m-footer":   { label: "Swipe →",              hasFont: true },
@@ -336,6 +339,9 @@ function MCQSlide({
     { label: "D", text: data.optionD || "Option D" },
   ];
 
+  const coverW = Math.round(160 * sc("m-bookinfo"));
+  const coverH = Math.round(210 * sc("m-bookinfo"));
+
   return (
     <div
       ref={divRef}
@@ -364,17 +370,60 @@ function MCQSlide({
         </div>
       </D>
 
-      {/* Middle — question + options */}
+      {/* Middle — book info / question / options  (space-between) */}
       <div style={{
         flex: 1, width: "100%",
         display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        gap: 56, paddingTop: 24, paddingBottom: 24, zIndex: 3,
+        alignItems: "center", justifyContent: "space-between",
+        paddingTop: 32, paddingBottom: 16, zIndex: 3,
       }}>
+
+        {/* Book cover + title row */}
+        <D id="m-bookinfo" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
+          isSelected={selected === "m-bookinfo"} style={{ width: "100%" }}>
+          <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
+            {/* Cover */}
+            {data.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.coverUrl} alt="Book cover" style={{
+                width: coverW, height: coverH, objectFit: "cover",
+                boxShadow: "8px 10px 32px rgba(0,0,0,0.28)", borderRadius: 3, flexShrink: 0,
+              }} />
+            ) : (
+              <div style={{
+                width: coverW, height: coverH, backgroundColor: "#d8ccb5",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "8px 10px 32px rgba(0,0,0,0.28)", borderRadius: 3, flexShrink: 0,
+              }}>
+                <span style={{ fontFamily: FONT, color: "#8a7a60", fontSize: 22 * sc("m-bookinfo") }}>표지</span>
+              </div>
+            )}
+            {/* Title + author */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontFamily: FONT, fontSize: 52 * sc("m-bookinfo"),
+                letterSpacing: `${ls("m-bookinfo")}em`, lineHeight: lh("m-bookinfo"),
+                fontWeight: 900, color: NAVY,
+                wordBreak: "break-word", whiteSpace: "pre-wrap",
+              }}>
+                {data.bookTitle || "Book Title"}
+              </div>
+              <div style={{
+                fontFamily: FONT, fontSize: 34 * sc("m-bookinfo"),
+                letterSpacing: `${ls("m-bookinfo")}em`, lineHeight: lh("m-bookinfo"),
+                fontWeight: 500, color: NAVY, marginTop: 10,
+              }}>
+                by {data.author || "Author"}
+              </div>
+            </div>
+          </div>
+        </D>
+
+        {/* Question */}
         <D id="m-question" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
           isSelected={selected === "m-question"} style={{ width: "100%", textAlign: "center" }}>
           <div style={{
-            fontFamily: FONT, fontSize: 44 * sc("m-question"),
+            fontFamily: FONT, fontSize: 38 * sc("m-question"),
             letterSpacing: `${ls("m-question")}em`, lineHeight: lh("m-question"),
             fontWeight: 600, color: NAVY,
             whiteSpace: "pre-wrap", wordBreak: "break-word",
@@ -383,15 +432,16 @@ function MCQSlide({
           </div>
         </D>
 
+        {/* Options A–D */}
         <D id="m-options" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
-          isSelected={selected === "m-options"} style={{ width: "100%", padding: "0 10px" }}>
+          isSelected={selected === "m-options"} style={{ width: "100%", padding: "0 4px" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {options.map(({ label, text }) => (
               <div key={label} style={{
-                fontFamily: FONT, fontSize: 42 * sc("m-options"),
+                fontFamily: FONT, fontSize: 36 * sc("m-options"),
                 letterSpacing: `${ls("m-options")}em`, lineHeight: lh("m-options"),
                 fontWeight: 500, color: NAVY,
-                display: "flex", gap: 18, alignItems: "flex-start",
+                display: "flex", gap: 16, alignItems: "flex-start",
               }}>
                 <span style={{ fontWeight: 700, flexShrink: 0 }}>{label})</span>
                 <span style={{ wordBreak: "break-word" }}>{text}</span>
