@@ -14,10 +14,7 @@ type Data = {
   keyword: string;
   questionType: string;
   question: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
+  optionsText: string;
   bookTitle: string;
   author: string;
   coverUrl: string;
@@ -39,7 +36,6 @@ const DEFAULT_LS: Record<string, number> = {
   "m-bookinfo": -0.01,
   "m-question": 0.01,
   "m-options":  0.01,
-  "m-footer":   0.08,
 };
 
 // Default line-height per element
@@ -54,7 +50,6 @@ const DEFAULT_LH: Record<string, number> = {
   "m-bookinfo": 1.1,
   "m-question": 1.35,
   "m-options":  1.5,
-  "m-footer":   1.2,
 };
 
 const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
@@ -69,7 +64,6 @@ const ELEM_META: Record<string, { label: string; hasFont: boolean }> = {
   "m-bookinfo": { label: "표지 + 제목 (MCQ)",     hasFont: true },
   "m-question": { label: "문제 텍스트",            hasFont: true },
   "m-options":  { label: "보기 A–D",              hasFont: true },
-  "m-footer":   { label: "Swipe →",              hasFont: true },
 };
 
 // ──────────────────────────────────────────────
@@ -332,12 +326,12 @@ function MCQSlide({
   function ls(id: string) { return styleOverrides?.[id]?.letterSpacing ?? (DEFAULT_LS[id] ?? 0); }
   function lh(id: string) { return styleOverrides?.[id]?.lineHeight ?? (DEFAULT_LH[id] ?? 1.2); }
 
-  const options = [
-    { label: "A", text: data.optionA || "Option A" },
-    { label: "B", text: data.optionB || "Option B" },
-    { label: "C", text: data.optionC || "Option C" },
-    { label: "D", text: data.optionD || "Option D" },
-  ];
+  const optionLines = data.optionsText.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 4);
+  const OPTIONS_LABELS = ["A", "B", "C", "D"];
+  const options = OPTIONS_LABELS.map((label, i) => ({
+    label,
+    text: optionLines[i] ?? `Option ${label}`,
+  }));
 
   const coverW = Math.round(160 * sc("m-bookinfo"));
   const coverH = Math.round(210 * sc("m-bookinfo"));
@@ -450,18 +444,6 @@ function MCQSlide({
           </div>
         </D>
       </div>
-
-      {/* Footer */}
-      <D id="m-footer" offsets={offsets} onStartDrag={onStartDrag} onSelect={onSelect}
-        isSelected={selected === "m-footer"} style={{ zIndex: 3, flexShrink: 0 }}>
-        <div style={{
-          fontFamily: FONT, fontSize: 28 * sc("m-footer"),
-          letterSpacing: `${ls("m-footer")}em`, lineHeight: lh("m-footer"),
-          color: NAVY, fontWeight: 400,
-        }}>
-          Swipe →
-        </div>
-      </D>
     </div>
   );
 }
@@ -485,7 +467,7 @@ export default function Dashboard() {
   const [quizMode, setQuizMode] = useState<"keyword" | "mcq">("keyword");
   const [data, setData] = useState<Data>({
     quizNumber: "", keyword: "", questionType: "Which book is this place from?",
-    question: "", optionA: "", optionB: "", optionC: "", optionD: "",
+    question: "", optionsText: "",
     bookTitle: "", author: "", coverUrl: "",
   });
 
@@ -748,13 +730,15 @@ export default function Dashboard() {
                   rows={4} style={{ ...inputCss, resize: "vertical" }} />
               </Field>
 
-              {(["A", "B", "C", "D"] as const).map((letter) => (
-                <Field key={letter} label={`보기 ${letter}`}>
-                  <input type="text" value={data[`option${letter}` as keyof Data]}
-                    onChange={(e) => set(`option${letter}` as keyof Data, e.target.value)}
-                    placeholder={`보기 ${letter}`} style={inputCss} />
-                </Field>
-              ))}
+              <Field label="보기 (한 줄에 하나씩)" hint="A B C D 자동 추가">
+                <textarea
+                  value={data.optionsText}
+                  onChange={(e) => set("optionsText", e.target.value)}
+                  placeholder={"Darth Vader\nBleeding Scream\nThe Mummy\nSkeleton"}
+                  rows={4}
+                  style={{ ...inputCss, resize: "vertical" }}
+                />
+              </Field>
             </>
           )}
 
